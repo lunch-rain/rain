@@ -78,6 +78,10 @@ function moveButton(glyph, label, column, id) {
 
 function render() {
   const counts = getCounts(items);
+  const progress = items.length ? Math.round((counts.done / items.length) * 100) : 0;
+  $("#progress-fill").style.width = `${progress}%`;
+  $(".progress-track").setAttribute("aria-valuenow", String(progress));
+  $("#progress-summary").textContent = items.length ? `已完成 ${counts.done} / ${items.length} 件事 · ${progress}%` : "从一个想法开始";
   for (const column of COLUMNS) {
     $(`[data-count="${column}"]`).textContent = counts[column];
     $(`#${column}-count`).textContent = counts[column];

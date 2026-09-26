@@ -27,7 +27,7 @@ npm test
 
 ## 灵感来源
 
-2026-09-26 浏览 [GitHub Trending](https://github.com/trending?since=daily) 时，看到 [Paperclip](https://github.com/paperclipai/paperclip) 和 [Superpowers](https://github.com/obra/superpowers) 等项目对工作流组织的关注。Rain Desk 是独立实现的个人轻量工具，专门保留了无需服务端也能使用的记录、推进和专注流程。
+2026-09-26 浏览 [GitHub Trending](https://github.com/trending?since=weekly) 时，参考了 [Paperclip](https://github.com/paperclipai/paperclip) 对工作状态的呈现、[Cline](https://github.com/cline/cline) 对清晰操作入口的强调、[OpenSpec](https://github.com/Fission-AI/OpenSpec) 的阶段式工作流，以及 [Impeccable](https://github.com/pbakaus/impeccable) 对视觉层次与模板化设计的提醒。Rain Desk 是独立实现的个人轻量工具，保留无需服务端也能使用的记录、推进和专注流程，并采用雨后窗景作为自己的视觉主题。
 
 ## 许可
 
