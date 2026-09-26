@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#111326" />
+    <meta name="description" content="Rain Desk：在浏览器里收集灵感、规划任务并保持专注。无需注册，数据留在本机。" />
+    <title>Rain Desk — 给灵感一个落脚点</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./src/app.js"></script>
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="./" aria-label="Rain Desk 首页"><span class="brand-mark">◈</span><span>rain<span class="brand-light">desk</span><small>灵感与专注工作台</small></span></a>
+        <div class="sidebar-section"><span class="eyebrow">工作空间</span>
+          <a class="nav-link active" href="#workspace"><span>▦</span> 我的看板 <span class="nav-arrow">↗</span></a>
+          <a class="nav-link" href="#focus"><span>◷</span> 专注时刻 <span class="nav-arrow">↗</span></a>
+        </div>
+        <div class="sidebar-bottom"><div class="privacy-card"><span class="privacy-icon">✦</span><strong>只属于你的空间</strong><p>无需登录。所有任务仅保存在当前浏览器里。</p></div><a href="https://github.com/lunch-rain/rain" target="_blank" rel="noopener noreferrer" class="github-link">GitHub 源码 <span>↗</span></a></div>
+      </aside>
+
+      <main id="workspace" class="main-content">
+        <header class="topbar"><div class="breadcrumbs">工作空间 <span>/</span> 我的看板</div><div class="top-actions"><span class="local-badge"><span></span> 本地保存</span><button id="export-button" class="text-button" type="button">导出数据</button><button id="import-button" class="text-button" type="button">导入数据</button><input id="import-file" type="file" accept="application/json,.json" hidden /></div></header>
+        <section class="hero"><div class="hero-copy"><span class="hero-kicker">YOUR SPACE TO THINK CLEARLY</span><h1>给灵感一个<span>落脚点。</span></h1><p>捕捉每个闪现的想法，把重要的事一步步推进。<br />留一点时间，专注于真正想做的事。</p><button id="hero-add" class="primary-button" type="button"><span>＋</span> 记录一个想法</button></div><div class="hero-art" aria-hidden="true"><div class="orb orb-back"></div><div class="orb orb-front"></div><div class="orbit orbit-a"></div><div class="orbit orbit-b"></div><span class="spark spark-a">✦</span><span class="spark spark-b">✧</span><span class="spark spark-c">✦</span></div></section>
+
+        <section class="overview" aria-label="任务概况"><div class="overview-label"><span class="eyebrow">今日概览</span><h2 id="greeting">让今天从容开始</h2><p id="today-date"></p></div><div class="stat"><span class="stat-icon purple">✧</span><div><strong id="inbox-count">0</strong><span>灵感待整理</span></div></div><div class="stat"><span class="stat-icon blue">◈</span><div><strong id="doing-count">0</strong><span>正在进行</span></div></div><div class="stat"><span class="stat-icon green">✓</span><div><strong id="done-count">0</strong><span>已经完成</span></div></div></section>
+
+        <section class="board-section" aria-labelledby="board-title"><div class="section-heading"><div><span class="eyebrow">MAKE IT HAPPEN</span><h2 id="board-title">灵感看板</h2><p>从想法到完成，每一步都看得见。</p></div><div class="board-actions"><label class="search-box"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="搜索任务..." aria-label="搜索任务" /></label><button id="add-button" class="secondary-button" type="button">＋ 新建任务</button></div></div><div class="board" id="board"><div class="board-column" data-column="inbox"><div class="column-heading"><span class="column-dot purple-dot"></span><h3>灵感收集</h3><span class="column-count" data-count="inbox">0</span></div><p class="column-description">先记下来，之后再安排</p><div class="card-list" data-list="inbox"></div><button class="column-add" data-add type="button">＋ 添加想法</button></div><div class="board-column" data-column="doing"><div class="column-heading"><span class="column-dot blue-dot"></span><h3>正在进行</h3><span class="column-count" data-count="doing">0</span></div><p class="column-description">现在值得投入的事情</p><div class="card-list" data-list="doing"></div></div><div class="board-column" data-column="done"><div class="column-heading"><span class="column-dot green-dot"></span><h3>已经完成</h3><span class="column-count" data-count="done">0</span></div><p class="column-description">为每个小小的进步喝彩</p><div class="card-list" data-list="done"></div></div></div></section>
+
+        <section id="focus" class="focus-section"><div class="focus-copy"><span class="eyebrow">A LITTLE TIME FOR YOURSELF</span><h2>进入专注时刻</h2><p>挑一件重要的事，暂时放下其他声音。<br />每一段专注，都让目标更近一点。</p><div class="timer-presets" role="group" aria-label="专注时长"><button class="preset active" data-minutes="25" type="button">25 分钟</button><button class="preset" data-minutes="50" type="button">50 分钟</button><button class="preset" data-minutes="5" type="button">休息 5 分钟</button></div></div><div class="timer-card"><div class="timer-ring" id="timer-ring"><div><span id="timer-display" aria-live="off">25:00</span><small id="timer-label">专注时间</small></div></div><div class="timer-controls"><button id="timer-toggle" class="timer-start" type="button">开始专注</button><button id="timer-reset" class="timer-reset" type="button" aria-label="重置计时器">↺</button></div></div></section>
+        <footer>Made with ☂ for quieter, brighter days <span>·</span> <a href="https://www.rainlove.work/">RainLove Blog ↗</a></footer>
+      </main>
+    </div>
+
+    <dialog id="item-dialog"><form id="item-form" method="dialog"><div class="dialog-heading"><div><span class="eyebrow">CAPTURE YOUR THOUGHT</span><h2 id="dialog-title">记录一个想法</h2></div><button type="button" id="dialog-close" class="dialog-close" aria-label="关闭">×</button></div><label>标题 <input id="item-title" name="title" maxlength="120" required placeholder="你想做什么？" /></label><label>补充说明 <textarea id="item-detail" name="detail" maxlength="1000" rows="4" placeholder="一些细节、一个链接，或下一步计划...\n"></textarea></label><label>优先级 <select id="item-priority" name="priority"><option value="normal">普通</option><option value="high">重要</option></select></label><div class="dialog-actions"><button type="button" id="dialog-cancel" class="text-button">取消</button><button type="submit" class="primary-button">保存任务</button></div></form></dialog>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
