@@ -1,4 +1,6 @@
 import { COLUMNS, STORAGE_KEY, createItem, getCounts, normalizeItems } from "./model.js";
+import { FOCUS_STORAGE_KEY, getTodayFocus, reconcileFocus } from "./focus.js";
+import { makeBackup, readBackup } from "./backup.js";
 
 const $ = (selector) => document.querySelector(selector);
 const stored = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; } })();
@@ -95,6 +97,7 @@ function render() {
       list.append(empty);
     } else visible.forEach((item) => list.append(makeCard(item)));
   }
+  renderFocusTasks();
 }
 
 function openDialog(item = null) {
@@ -154,7 +157,8 @@ for (const column of document.querySelectorAll(".board-column")) {
 }
 
 $("#export-button").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify({ app: "rain-desk", version: 1, exportedAt: new Date().toISOString(), items }, null, 2)], { type: "application/json" });
+  if (focus.endsAt) tick();
+  const blob = new Blob([JSON.stringify(makeBackup(items, focus), null, 2)], { type: "application/json" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
   link.download = `rain-desk-${new Date().toISOString().slice(0, 10)}.json`;
@@ -168,60 +172,115 @@ $("#import-file").addEventListener("change", async (event) => {
   if (!file) return;
   try {
     if (file.size > 2_000_000) throw new Error("文件过大，最大支持 2 MB");
-    const data = JSON.parse(await file.text());
-    if (data.app !== "rain-desk" || data.version !== 1) throw new Error("请选择 Rain Desk 导出的备份文件");
-    const next = normalizeItems(data.items);
-    if (!confirm(`将导入 ${next.length} 条任务，并替换当前 ${items.length} 条任务。继续吗？`)) return;
+    const { items: next, focus: nextFocus } = readBackup(JSON.parse(await file.text()));
+    if (!confirm(`将导入 ${next.length} 条任务，并替换当前 ${items.length} 条任务${nextFocus ? "和专注记录" : ""}。继续吗？`)) return;
     items = next;
+    if (nextFocus) {
+      clearInterval(tickInterval);
+      focus = nextFocus;
+      persistFocus();
+      renderTimer();
+      renderFocusStats();
+    }
     save();
     notify(`已导入 ${items.length} 条任务`);
   } catch (error) { notify(error.message || "导入失败", true); }
   finally { event.target.value = ""; }
 });
 
-const now = new Date();
-$("#today-date").textContent = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" }).format(now);
-$("#greeting").textContent = now.getHours() < 11 ? "早上好，慢慢开始也很好" : now.getHours() < 18 ? "今天也在一点点前进" : "辛苦了，记得留点时间给自己";
+function renderToday() {
+  const now = new Date();
+  $("#today-date").textContent = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" }).format(now);
+  $("#greeting").textContent = now.getHours() < 11 ? "早上好，慢慢开始也很好" : now.getHours() < 18 ? "今天也在一点点前进" : "辛苦了，记得留点时间给自己";
+}
 
-let totalSeconds = 25 * 60;
-let remainingSeconds = totalSeconds;
-let endTime = null;
+const restoredFocus = (() => {
+  try { return reconcileFocus(JSON.parse(localStorage.getItem(FOCUS_STORAGE_KEY) || "null")); }
+  catch { return reconcileFocus(null); }
+})();
+let focus = restoredFocus.state;
 let tickInterval = null;
+
+function persistFocus() {
+  try { localStorage.setItem(FOCUS_STORAGE_KEY, JSON.stringify(focus)); }
+  catch { notify("专注记录无法保存，请检查浏览器存储空间", true); }
+}
+
+function renderFocusTasks() {
+  const select = $("#focus-task");
+  const current = focus.targetId;
+  select.replaceChildren(new Option("自由专注", ""));
+  for (const item of items.filter((entry) => entry.column === "doing")) {
+    select.add(new Option(item.title, item.id));
+  }
+  focus.targetId = items.some((item) => item.id === current && item.column === "doing") ? current : "";
+  select.value = focus.targetId;
+  if (current !== focus.targetId) persistFocus();
+}
+
+function renderFocusStats() {
+  const today = getTodayFocus(focus);
+  $("#focus-minutes").textContent = today.minutes;
+  $("#focus-sessions").textContent = today.sessions;
+}
+
 function renderTimer() {
-  const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, "0");
-  const seconds = String(remainingSeconds % 60).padStart(2, "0");
+  const minutes = String(Math.floor(focus.remainingSeconds / 60)).padStart(2, "0");
+  const seconds = String(focus.remainingSeconds % 60).padStart(2, "0");
   $("#timer-display").textContent = `${minutes}:${seconds}`;
-  $("#timer-ring").style.setProperty("--progress", `${((totalSeconds - remainingSeconds) / totalSeconds) * 100}%`);
-  document.title = endTime ? `${minutes}:${seconds} · Rain Desk` : "Rain Desk — 给灵感一个落脚点";
-  $("#timer-toggle").textContent = endTime ? "暂停计时" : remainingSeconds < totalSeconds ? "继续专注" : "开始专注";
+  $("#timer-ring").style.setProperty("--progress", `${((focus.durationSeconds - focus.remainingSeconds) / focus.durationSeconds) * 100}%`);
+  $("#timer-label").textContent = focus.durationSeconds === 300 ? "休息时间" : "专注时间";
+  document.title = focus.endsAt ? `${minutes}:${seconds} · Rain Desk` : "Rain Desk — 给灵感一个落脚点";
+  $("#timer-toggle").textContent = focus.endsAt ? "暂停计时" : focus.remainingSeconds < focus.durationSeconds ? "继续专注" : "开始专注";
+  document.querySelectorAll(".preset").forEach((button) => button.classList.toggle("active", Number(button.dataset.minutes) * 60 === focus.durationSeconds));
 }
-function pauseTimer() {
-  if (endTime) remainingSeconds = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-  endTime = null;
-  clearInterval(tickInterval);
-  renderTimer();
-}
+
 function tick() {
-  remainingSeconds = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-  if (remainingSeconds === 0) {
-    pauseTimer();
+  const result = reconcileFocus(focus);
+  focus = result.state;
+  if (result.completed) {
+    clearInterval(tickInterval);
+    persistFocus();
+    renderFocusStats();
     notify("这一段时间完成了，去伸个懒腰吧 ✨");
   }
   renderTimer();
 }
+
+function pauseTimer() {
+  if (!focus.endsAt) return;
+  tick();
+  focus.endsAt = null;
+  clearInterval(tickInterval);
+  persistFocus();
+  renderTimer();
+}
+
 $("#timer-toggle").addEventListener("click", () => {
-  if (endTime) pauseTimer();
-  else { if (remainingSeconds === 0) remainingSeconds = totalSeconds; endTime = Date.now() + remainingSeconds * 1000; tickInterval = setInterval(tick, 250); renderTimer(); }
+  if (focus.endsAt) pauseTimer();
+  else {
+    if (focus.remainingSeconds === 0) focus.remainingSeconds = focus.durationSeconds;
+    focus.endsAt = Date.now() + focus.remainingSeconds * 1000;
+    persistFocus();
+    tickInterval = setInterval(tick, 250);
+    renderTimer();
+  }
 });
-$("#timer-reset").addEventListener("click", () => { pauseTimer(); remainingSeconds = totalSeconds; renderTimer(); });
+$("#timer-reset").addEventListener("click", () => { pauseTimer(); focus.remainingSeconds = focus.durationSeconds; persistFocus(); renderTimer(); });
 for (const button of document.querySelectorAll(".preset")) button.addEventListener("click", () => {
   pauseTimer();
-  totalSeconds = Number(button.dataset.minutes) * 60;
-  remainingSeconds = totalSeconds;
-  document.querySelectorAll(".preset").forEach((preset) => preset.classList.toggle("active", preset === button));
-  $("#timer-label").textContent = totalSeconds === 300 ? "休息时间" : "专注时间";
+  focus.durationSeconds = Number(button.dataset.minutes) * 60;
+  focus.remainingSeconds = focus.durationSeconds;
+  persistFocus();
   renderTimer();
 });
+$("#focus-task").addEventListener("change", (event) => { focus.targetId = event.target.value; persistFocus(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && focus.endsAt) tick(); });
 
+renderToday();
 render();
 renderTimer();
+renderFocusStats();
+if (focus.endsAt) tickInterval = setInterval(tick, 250);
+if (restoredFocus.completed) { persistFocus(); notify("上一轮计时已结束 ✨"); }
+setInterval(() => { renderToday(); renderFocusStats(); }, 60_000);
